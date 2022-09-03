@@ -3,11 +3,22 @@ from operator import sub
 
 
 class levenshtein_distance:
-    def __init__(self, seq1: str, seq2: str):
+    def __init__(
+        self,
+        seq1: str,
+        seq2: str,
+        ins_incr: int = 1,
+        rep_incr: int = 1,
+        del_incr: int = 1,
+    ):
         self.seq1 = seq1
         self.seq2 = seq2
         self.len_seq1 = len(self.seq1)
         self.len_seq2 = len(self.seq2)
+
+        self.ins_incr = ins_incr
+        self.rep_incr = rep_incr
+        self.del_incr = del_incr
 
         self.dist_val = self.levenshtein()
 
@@ -20,7 +31,7 @@ class levenshtein_distance:
         for x in range(seq1_len):
             for y in range(seq2_len):
                 op_values = dynamic_operations(x, y, seq_dict, seq_arr)
-                seq_arr = incr_seq(x, y, seq_arr, op_values)
+                seq_arr = self.incr_seq(x, y, seq_arr, op_values)
 
         dist_val = int(seq_arr[self.len_seq2][self.len_seq1])
         return dist_val
@@ -32,6 +43,27 @@ class levenshtein_distance:
 
     def distance(self) -> int:
         return self.dist_val
+
+    def ops_incr_dict(self) -> dict[str, int]:
+        ops_incr = {
+            "beginning": 0,
+            "matching": 0,
+            "insert": self.ins_incr,
+            "replace": self.rep_incr,
+            "delete": self.del_incr,
+        }
+        return ops_incr
+
+    def incr_seq(
+        self, x: int, y: int, seq_arr: np.ndarray, op_values: dict
+    ) -> np.ndarray:
+        op_key = op_values["key"]
+        ops_incr = self.ops_incr_dict()
+        ops_incr_val = ops_incr[op_key]
+
+        op_value = op_values["val"]
+        seq_arr[y][x] = op_value + ops_incr_val
+        return seq_arr
 
 
 def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
@@ -52,7 +84,6 @@ def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
             if sequence_str not in sequence_dict:
                 sequence_dict.update({sequence_str: {}})
             sequence_dict[sequence_str].update({l_index: letter})
-
     return sequence_dict, zero_seq_arr
 
 
@@ -72,7 +103,6 @@ def insert_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
 
     x = x_op(x, 1) if x_op else x
     y = y_op(y, 1) if y_op else y
-
     return x, y
 
 
@@ -82,7 +112,6 @@ def replace_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
 
     x = x_op(x, 1) if x_op else x
     y = y_op(y, 1) if y_op else y
-
     return x, y
 
 
@@ -94,7 +123,6 @@ def delete_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
 
     x = x_op(x, 1) if x_op else x
     y = y_op(y, 1) if y_op else y
-
     return x, y
 
 
@@ -133,39 +161,11 @@ def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> d
         if (x_dict is not None and y_dict is not None) and (x_dict == y_dict):
             x_m = min_op_dict["x"]
             y_m = min_op_dict["y"]
-            op_dict = {
-                "x": x_m,
-                "y": y_m,
-                "val": seq_arr[y_m][x_m],
-                "key": "matching",
-            }
+            op_dict = {"x": x_m, "y": y_m, "val": seq_arr[y_m][x_m], "key": "matching"}
 
         else:
             op_dict = min_op_dict
 
     else:
         op_dict = {"x": 0, "y": 0, "val": 0, "key": "beginning"}
-
     return op_dict
-
-
-def ops_incr_dict() -> dict[str, int]:
-    ops_incr = {
-        "beginning": 0,
-        "matching": 0,
-        "insert": 1,
-        "replace": 2,
-        "delete": 1,
-    }
-    return ops_incr
-
-
-def incr_seq(x: int, y: int, seq_arr: np.ndarray, op_values: dict) -> np.ndarray:
-    op_key = op_values["key"]
-    ops_incr = ops_incr_dict()
-    ops_incr_val = ops_incr[op_key]
-
-    op_value = op_values["val"]
-    seq_arr[y][x] = op_value + ops_incr_val
-
-    return seq_arr
