@@ -7,18 +7,18 @@ class levenshtein_distance:
         self,
         seq1: str,
         seq2: str,
-        ins_incr: int = 1,
-        rep_incr: int = 1,
-        del_incr: int = 1,
+        ins_cost: int = 1,
+        rep_cost: int = 1,
+        del_cost: int = 1,
     ):
         self.seq1 = seq1
         self.seq2 = seq2
         self.len_seq1 = len(self.seq1)
         self.len_seq2 = len(self.seq2)
 
-        self.ins_incr = ins_incr
-        self.rep_incr = rep_incr
-        self.del_incr = del_incr
+        self.ins_cost = ins_cost
+        self.rep_cost = rep_cost
+        self.del_cost = del_cost
 
         self.dist_val = self.levenshtein()
 
@@ -48,9 +48,9 @@ class levenshtein_distance:
         ops_incr = {
             "beginning": 0,
             "matching": 0,
-            "insert": self.ins_incr,
-            "replace": self.rep_incr,
-            "delete": self.del_incr,
+            "insert": self.ins_cost,
+            "replace": self.rep_cost,
+            "delete": self.del_cost,
         }
         return ops_incr
 
