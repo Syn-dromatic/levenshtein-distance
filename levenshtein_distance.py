@@ -33,9 +33,10 @@ def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
 
 
 def insert_null_onset(seq1, seq2):
-    seq1.insert(0, ' ')
-    seq2.insert(0, ' ')
+    seq1.insert(0, " ")
+    seq2.insert(0, " ")
     return seq1, seq2
+
 
 def insert_operation(x: int, y: int) -> tuple[int, int]:
     insert_state = (None, sub)
@@ -126,11 +127,11 @@ def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> d
 
 def ops_incr_dict():
     ops_incr = {
-        "beginning" : 0,
-        "matching" : 0,
-        "insert" : 1,
-        "replace" : 1,
-        "delete" : 1,
+        "beginning": 0,
+        "matching": 0,
+        "insert": 1,
+        "replace": 1,
+        "delete": 1,
     }
     return ops_incr
 
