@@ -2,6 +2,38 @@ import numpy as np
 from operator import sub
 
 
+class levenshtein_distance:
+    def __init__(self, seq1: str, seq2: str):
+        self.seq1 = seq1
+        self.seq2 = seq2
+        self.len_seq1 = len(self.seq1)
+        self.len_seq2 = len(self.seq2)
+
+        self.dist_val = self.levenshtein()
+
+    def levenshtein(self) -> int:
+        seq_dict, seq_arr = create_sequence_data(self.seq1, self.seq2)
+
+        seq1_len = len(seq_dict["seq1"])
+        seq2_len = len(seq_dict["seq2"])
+
+        for x in range(seq1_len):
+            for y in range(seq2_len):
+                op_values = dynamic_operations(x, y, seq_dict, seq_arr)
+                seq_arr = incr_seq(x, y, seq_arr, op_values)
+
+        dist_val = int(seq_arr[self.len_seq2][self.len_seq1])
+        return dist_val
+
+    def ratio(self) -> float:
+        total_lens = len(self.seq1) + len(self.seq2)
+        ratio_calc = (total_lens - self.dist_val) / total_lens
+        return ratio_calc
+
+    def distance(self) -> int:
+        return self.dist_val
+
+
 def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
     sequence_dict = {}
 
@@ -9,25 +41,17 @@ def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
     seq1_l, seq2_l = insert_null_onset(seq1_l, seq2_l)
     sequences = [seq1_l, seq2_l]
 
-    max_seq = max([seq1_l, seq2_l], key=len)
-    max_seq_len = len(max_seq)
+    seq1_len = len(seq1_l)
+    seq2_len = len(seq2_l)
 
-    zero_seq_arr = np.zeros((max_seq_len, max_seq_len))
+    zero_seq_arr = np.zeros((seq2_len, seq1_len))
 
     for s_index, seq in enumerate(sequences):
-        sequence_str = f"seq{s_index}"
-        final_index = 0
+        sequence_str = f"seq{s_index+1}"
         for l_index, letter in enumerate(seq):
-            final_index = l_index
             if sequence_str not in sequence_dict:
                 sequence_dict.update({sequence_str: {}})
             sequence_dict[sequence_str].update({l_index: letter})
-
-        if len(seq) < max_seq_len:
-            diff = max_seq_len - len(seq)
-            for _ in range(diff):
-                final_index += 1
-                sequence_dict[sequence_str].update({final_index: ""})
 
     return sequence_dict, zero_seq_arr
 
@@ -38,8 +62,11 @@ def insert_null_onset(seq1: list, seq2: list) -> tuple[list, list]:
     return seq1, seq2
 
 
-def insert_operation(x: int, y: int) -> tuple[int, int]:
-    insert_state = (sub, None)
+def insert_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
+    seq1_len = len(seq_dict["seq1"])
+    seq2_len = len(seq_dict["seq2"])
+
+    insert_state = (None, sub) if seq1_len < seq2_len else (sub, None)
 
     x_op, y_op = insert_state
 
@@ -49,7 +76,7 @@ def insert_operation(x: int, y: int) -> tuple[int, int]:
     return x, y
 
 
-def replace_operation(x: int, y: int) -> tuple[int, int]:
+def replace_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
     replace_state = (sub, sub)
     x_op, y_op = replace_state
 
@@ -59,8 +86,10 @@ def replace_operation(x: int, y: int) -> tuple[int, int]:
     return x, y
 
 
-def delete_operation(x: int, y: int) -> tuple[int, int]:
-    delete_state = (None, sub)
+def delete_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
+    seq1_len = len(seq_dict["seq1"])
+    seq2_len = len(seq_dict["seq2"])
+    delete_state = (sub, None) if seq1_len < seq2_len else (None, sub)
     x_op, y_op = delete_state
 
     x = x_op(x, 1) if x_op else x
@@ -75,12 +104,12 @@ def filter_ops_dict(ops_list: list) -> list:
 
 
 def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> dict:
-    x_dict = seq_dict["seq0"][x]
-    y_dict = seq_dict["seq1"][y]
+    x_dict = seq_dict["seq1"][x]
+    y_dict = seq_dict["seq2"][y]
 
-    x_ins, y_ins = insert_operation(x, y)
-    x_rep, y_rep = replace_operation(x, y)
-    x_del, y_del = delete_operation(x, y)
+    x_ins, y_ins = insert_operation(x, y, seq_dict)
+    x_rep, y_rep = replace_operation(x, y, seq_dict)
+    x_del, y_del = delete_operation(x, y, seq_dict)
 
     ins_val = seq_arr[y_ins][x_ins] if (x_ins >= 0 and y_ins >= 0) else None
     rep_val = seq_arr[y_rep][x_rep] if (x_rep >= 0 and y_rep >= 0) else None
@@ -101,7 +130,7 @@ def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> d
 
         min_op_dict = min_ops[0]
 
-        if x_dict == y_dict:
+        if (x_dict is not None and y_dict is not None) and (x_dict == y_dict):
             x_m = min_op_dict["x"]
             y_m = min_op_dict["y"]
             op_dict = {
@@ -125,7 +154,7 @@ def ops_incr_dict() -> dict[str, int]:
         "beginning": 0,
         "matching": 0,
         "insert": 1,
-        "replace": 1,
+        "replace": 2,
         "delete": 1,
     }
     return ops_incr
@@ -140,20 +169,3 @@ def incr_seq(x: int, y: int, seq_arr: np.ndarray, op_values: dict) -> np.ndarray
     seq_arr[y][x] = op_value + ops_incr_val
 
     return seq_arr
-
-
-def levenshtein(seq1: str, seq2: str) -> int:
-    seq_dict, seq_arr = create_sequence_data(seq1, seq2)
-
-    len_arr = len(seq_arr[0])
-
-    for x in range(len_arr):
-        for y in range(len_arr):
-            op_values = dynamic_operations(x, y, seq_dict, seq_arr)
-            seq_arr = incr_seq(x, y, seq_arr, op_values)
-
-    max_len_1 = len(seq_dict["seq0"]) - 1
-    max_len_2 = len(seq_dict["seq1"]) - 1
-    dist_val = int(seq_arr[max_len_1][max_len_2])
-
-    return dist_val
