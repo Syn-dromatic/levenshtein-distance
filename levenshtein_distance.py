@@ -4,10 +4,15 @@ from operator import sub
 
 def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
     sequence_dict = {}
-    sequences = [seq1, seq2]
-    max_seq = max(sequences, key=len)
+
+    seq1_l, seq2_l = [*seq1], [*seq2]
+    seq1_l, seq2_l = insert_null_onset(seq1_l, seq2_l)
+    sequences = [seq1_l, seq2_l]
+
+    max_seq = max([seq1_l, seq2_l], key=len)
     max_seq_len = len(max_seq)
-    empty_seq_arr = np.zeros((max_seq_len, max_seq_len))
+
+    zero_seq_arr = np.zeros((max_seq_len, max_seq_len))
 
     for s_index, seq in enumerate(sequences):
         sequence_str = f"seq{s_index}"
@@ -23,8 +28,14 @@ def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
             for _ in range(diff):
                 final_index += 1
                 sequence_dict[sequence_str].update({final_index: ""})
-    return sequence_dict, empty_seq_arr
 
+    return sequence_dict, zero_seq_arr
+
+
+def insert_null_onset(seq1, seq2):
+    seq1.insert(0, ' ')
+    seq2.insert(0, ' ')
+    return seq1, seq2
 
 def insert_operation(x: int, y: int) -> tuple[int, int]:
     insert_state = (None, sub)
@@ -113,34 +124,40 @@ def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> d
     return op_values
 
 
+def ops_incr_dict():
+    ops_incr = {
+        "beginning" : 0,
+        "matching" : 0,
+        "insert" : 1,
+        "replace" : 1,
+        "delete" : 1,
+    }
+    return ops_incr
+
+
 def incr_seq(x: int, y: int, seq_arr: np.ndarray, op_values: dict) -> np.ndarray:
-    null_ops = ["beginning"]
-    same_ops = ["matching"]
     op_key = op_values["key"]
+    ops_incr = ops_incr_dict()
+    ops_incr_val = ops_incr[op_key]
 
-    if op_key in same_ops:
-        op_value = op_values["val"]
-        seq_arr[y][x] = op_value
+    op_value = op_values["val"]
+    seq_arr[y][x] = op_value + ops_incr_val
 
-    elif op_key in null_ops:
-        pass
-
-    else:
-        op_value = op_values["val"]
-        seq_arr[y][x] += op_value + 1
     return seq_arr
 
 
 def levenshtein(seq1: str, seq2: str) -> int:
     seq_dict, seq_arr = create_sequence_data(seq1, seq2)
-    max_len = len(seq_dict["seq0"])
 
-    for x in range(max_len):
-        for y in range(max_len):
+    len_arr = len(seq_arr[0])
+
+    for x in range(len_arr):
+        for y in range(len_arr):
             op_values = dynamic_operations(x, y, seq_dict, seq_arr)
             seq_arr = incr_seq(x, y, seq_arr, op_values)
 
-    len_seq1 = len(seq1) - 1
-    len_seq2 = len(seq2) - 1
-    dist_val = int(seq_arr[len_seq1][len_seq2])
+    max_len_1 = len(seq_dict["seq0"]) - 1
+    max_len_2 = len(seq_dict["seq1"]) - 1
+    dist_val = int(seq_arr[max_len_1][max_len_2])
+
     return dist_val
