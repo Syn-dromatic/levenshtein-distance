@@ -125,10 +125,6 @@ def incr_seq(x: int, y: int, seq_arr: np.ndarray, op_values: dict) -> np.ndarray
     elif op_key in null_ops:
         pass
 
-    elif op_key == "replace":
-        op_value = op_values["val"]
-        seq_arr[y][x] += op_value + 1
-
     else:
         op_value = op_values["val"]
         seq_arr[y][x] += op_value + 1
