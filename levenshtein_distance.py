@@ -39,7 +39,7 @@ def insert_null_onset(seq1, seq2):
 
 
 def insert_operation(x: int, y: int) -> tuple[int, int]:
-    insert_state = (None, sub)
+    insert_state = (sub, None)
 
     x_op, y_op = insert_state
 
@@ -60,7 +60,7 @@ def replace_operation(x: int, y: int) -> tuple[int, int]:
 
 
 def delete_operation(x: int, y: int) -> tuple[int, int]:
-    delete_state = (sub, None)
+    delete_state = (None, sub)
     x_op, y_op = delete_state
 
     x = x_op(x, 1) if x_op else x
