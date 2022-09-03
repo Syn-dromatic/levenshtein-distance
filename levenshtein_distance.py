@@ -106,7 +106,7 @@ def insert_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
     return x, y
 
 
-def replace_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
+def replace_operation(x: int, y: int) -> tuple[int, int]:
     replace_state = (sub, sub)
     x_op, y_op = replace_state
 
@@ -136,7 +136,7 @@ def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> d
     y_dict = seq_dict["seq2"][y]
 
     x_ins, y_ins = insert_operation(x, y, seq_dict)
-    x_rep, y_rep = replace_operation(x, y, seq_dict)
+    x_rep, y_rep = replace_operation(x, y)
     x_del, y_del = delete_operation(x, y, seq_dict)
 
     ins_val = seq_arr[y_ins][x_ins] if (x_ins >= 0 and y_ins >= 0) else None
@@ -158,7 +158,7 @@ def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> d
 
         min_op_dict = min_ops[0]
 
-        if (x_dict is not None and y_dict is not None) and (x_dict == y_dict):
+        if x_dict == y_dict:
             x_m = min_op_dict["x"]
             y_m = min_op_dict["y"]
             op_dict = {"x": x_m, "y": y_m, "val": seq_arr[y_m][x_m], "key": "matching"}
