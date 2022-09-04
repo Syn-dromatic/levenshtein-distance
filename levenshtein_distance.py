@@ -18,17 +18,17 @@ class OpsCosts:
     del_cost: int = 1
 
     def create_costs_dict(self) -> dict[str, int]:
-        op_costs_dict = {
+        ops_costs_dict = {
             "onset": self.onset_cost,
             "match": self.match_cost,
             "insert": self.ins_cost,
             "replace": self.rep_cost,
             "delete": self.del_cost,
         }
-        return op_costs_dict
+        return ops_costs_dict
 
     def __post_init__(self):
-        self.op_costs_dict = self.create_costs_dict()
+        self.ops_costs_dict = self.create_costs_dict()
 
 
 @dataclass
@@ -94,7 +94,7 @@ def levenshtein_distance(seq1: str, seq2: str, ops_costs: OpsCosts) -> Levenshte
 
 def get_op_cost(ops_costs: OpsCosts, op_values: dict) -> int:
     op_key = op_values["key"]
-    op_cost = ops_costs.op_costs_dict[op_key]
+    op_cost = ops_costs.ops_costs_dict[op_key]
     return op_cost
 
 
