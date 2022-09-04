@@ -44,25 +44,25 @@ class levenshtein_distance:
     def distance(self) -> int:
         return self.dist_val
 
-    def ops_incr_dict(self) -> dict[str, int]:
-        ops_incr = {
+    def ops_costs_dict(self) -> dict[str, int]:
+        ops_costs = {
             "beginning": 0,
             "matching": 0,
             "insert": self.ins_cost,
             "replace": self.rep_cost,
             "delete": self.del_cost,
         }
-        return ops_incr
+        return ops_costs
 
     def incr_seq(
         self, x: int, y: int, seq_arr: np.ndarray, op_values: dict
     ) -> np.ndarray:
         op_key = op_values["key"]
-        ops_incr = self.ops_incr_dict()
-        ops_incr_val = ops_incr[op_key]
+        ops_costs = self.ops_costs_dict()
+        op_cost_val = ops_costs[op_key]
 
         op_value = op_values["val"]
-        seq_arr[y][x] = op_value + ops_incr_val
+        seq_arr[y][x] = op_value + op_cost_val
         return seq_arr
 
 
