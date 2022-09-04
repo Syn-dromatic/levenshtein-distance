@@ -1,8 +1,43 @@
 import numpy as np
 from operator import sub
+from dataclasses import dataclass
 
 
-class levenshtein_distance:
+@dataclass
+class LevenshteinData:
+    distance: int
+    seq_arr: np.ndarray
+
+
+@dataclass
+class OpsCosts:
+    onset_cost: int = 0
+    match_cost: int = 0
+    ins_cost: int = 1
+    rep_cost: int = 1
+    del_cost: int = 1
+
+    def create_costs_dict(self) -> dict[str, int]:
+        op_costs_dict = {
+            "onset": self.onset_cost,
+            "match": self.match_cost,
+            "insert": self.ins_cost,
+            "replace": self.rep_cost,
+            "delete": self.del_cost,
+        }
+        return op_costs_dict
+
+    def __post_init__(self):
+        self.op_costs_dict = self.create_costs_dict()
+
+
+@dataclass
+class SeqOp:
+    seq_arr: np.ndarray
+    seq_dict: dict
+
+
+class Levenshtein:
     def __init__(
         self,
         seq1: str,
@@ -13,61 +48,63 @@ class levenshtein_distance:
     ):
         self.seq1 = seq1
         self.seq2 = seq2
-        self.len_seq1 = len(self.seq1)
-        self.len_seq2 = len(self.seq2)
 
         self.ins_cost = ins_cost
         self.rep_cost = rep_cost
         self.del_cost = del_cost
 
-        self.dist_val = self.levenshtein()
+        ops_costs = OpsCosts(
+            ins_cost=self.ins_cost, rep_cost=self.rep_cost, del_cost=self.del_cost
+        )
+        self.lev_data: LevenshteinData = levenshtein_distance(
+            self.seq1, self.seq2, ops_costs
+        )
 
-    def levenshtein(self) -> int:
-        seq_dict, seq_arr = create_sequence_data(self.seq1, self.seq2)
-
-        seq1_len = len(seq_dict["seq1"])
-        seq2_len = len(seq_dict["seq2"])
-
-        for x in range(seq1_len):
-            for y in range(seq2_len):
-                op_values = dynamic_operations(x, y, seq_dict, seq_arr)
-                seq_arr = self.incr_seq(x, y, seq_arr, op_values)
-
-        dist_val = int(seq_arr[self.len_seq2][self.len_seq1])
-        return dist_val
+    def distance(self) -> int:
+        return self.lev_data.distance
 
     def ratio(self) -> float:
         total_lens = len(self.seq1) + len(self.seq2)
-        ratio_calc = (total_lens - self.dist_val) / total_lens
+        dist_val = self.lev_data.distance
+        ratio_calc = (total_lens - dist_val) / total_lens
         return ratio_calc
 
-    def distance(self) -> int:
-        return self.dist_val
-
-    def ops_costs_dict(self) -> dict[str, int]:
-        ops_costs = {
-            "beginning": 0,
-            "matching": 0,
-            "insert": self.ins_cost,
-            "replace": self.rep_cost,
-            "delete": self.del_cost,
-        }
-        return ops_costs
-
-    def incr_seq(
-        self, x: int, y: int, seq_arr: np.ndarray, op_values: dict
-    ) -> np.ndarray:
-        op_key = op_values["key"]
-        ops_costs = self.ops_costs_dict()
-        op_cost_val = ops_costs[op_key]
-
-        op_value = op_values["val"]
-        seq_arr[y][x] = op_value + op_cost_val
-        return seq_arr
+    def sequence_array(self) -> np.ndarray:
+        return self.lev_data.seq_arr
 
 
-def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
-    sequence_dict = {}
+def levenshtein_distance(seq1: str, seq2: str, ops_costs: OpsCosts) -> LevenshteinData:
+    seq_op = create_sequence_data(seq1, seq2)
+
+    seq1_len = len(seq_op.seq_dict["seq1"])
+    seq2_len = len(seq_op.seq_dict["seq2"])
+
+    for x in range(seq1_len):
+        for y in range(seq2_len):
+            op_values = dynamic_operations(x, y, seq_op)
+            op_value = get_op_value(op_values)
+            op_cost = get_op_cost(ops_costs, op_values)
+            seq_op.seq_arr[y][x] = op_value + op_cost
+
+    seq_arr = seq_op.seq_arr
+    dist_val = int(seq_arr[seq2_len - 1][seq1_len - 1])
+    lev_data = LevenshteinData(distance=dist_val, seq_arr=seq_arr)
+    return lev_data
+
+
+def get_op_cost(ops_costs: OpsCosts, op_values: dict) -> int:
+    op_key = op_values["key"]
+    op_cost = ops_costs.op_costs_dict[op_key]
+    return op_cost
+
+
+def get_op_value(op_values: dict) -> int:
+    op_value = op_values["val"]
+    return op_value
+
+
+def create_sequence_data(seq1: str, seq2: str) -> SeqOp:
+    seq_dict = {}
 
     seq1_l, seq2_l = [*seq1], [*seq2]
     seq1_l, seq2_l = insert_null_onset(seq1_l, seq2_l)
@@ -81,10 +118,12 @@ def create_sequence_data(seq1: str, seq2: str) -> tuple[dict, np.ndarray]:
     for s_index, seq in enumerate(sequences):
         sequence_str = f"seq{s_index+1}"
         for l_index, letter in enumerate(seq):
-            if sequence_str not in sequence_dict:
-                sequence_dict.update({sequence_str: {}})
-            sequence_dict[sequence_str].update({l_index: letter})
-    return sequence_dict, zero_seq_arr
+            if sequence_str not in seq_dict:
+                seq_dict.update({sequence_str: {}})
+            seq_dict[sequence_str].update({l_index: letter})
+
+    seq_op = SeqOp(seq_arr=zero_seq_arr, seq_dict=seq_dict)
+    return seq_op
 
 
 def insert_null_onset(seq1: list, seq2: list) -> tuple[list, list]:
@@ -131,17 +170,17 @@ def filter_ops_dict(ops_list: list) -> list:
     return filtered_ops
 
 
-def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> dict:
-    x_dict = seq_dict["seq1"][x]
-    y_dict = seq_dict["seq2"][y]
+def dynamic_operations(x: int, y: int, seq_op: SeqOp) -> dict:
+    x_dict = seq_op.seq_dict["seq1"][x]
+    y_dict = seq_op.seq_dict["seq2"][y]
 
-    x_ins, y_ins = insert_operation(x, y, seq_dict)
+    x_ins, y_ins = insert_operation(x, y, seq_op.seq_dict)
     x_rep, y_rep = replace_operation(x, y)
-    x_del, y_del = delete_operation(x, y, seq_dict)
+    x_del, y_del = delete_operation(x, y, seq_op.seq_dict)
 
-    ins_val = seq_arr[y_ins][x_ins] if (x_ins >= 0 and y_ins >= 0) else None
-    rep_val = seq_arr[y_rep][x_rep] if (x_rep >= 0 and y_rep >= 0) else None
-    del_val = seq_arr[y_del][x_del] if (x_del >= 0 and y_del >= 0) else None
+    ins_val = seq_op.seq_arr[y_ins][x_ins] if (x_ins >= 0 and y_ins >= 0) else None
+    rep_val = seq_op.seq_arr[y_rep][x_rep] if (x_rep >= 0 and y_rep >= 0) else None
+    del_val = seq_op.seq_arr[y_del][x_del] if (x_del >= 0 and y_del >= 0) else None
 
     ops_list = [
         {"x": x_ins, "y": y_ins, "val": ins_val, "key": "insert"},
@@ -161,11 +200,16 @@ def dynamic_operations(x: int, y: int, seq_dict: dict, seq_arr: np.ndarray) -> d
         if x_dict == y_dict:
             x_m = min_op_dict["x"]
             y_m = min_op_dict["y"]
-            op_dict = {"x": x_m, "y": y_m, "val": seq_arr[y_m][x_m], "key": "matching"}
+            op_dict = {
+                "x": x_m,
+                "y": y_m,
+                "val": seq_op.seq_arr[y_m][x_m],
+                "key": "match",
+            }
 
         else:
             op_dict = min_op_dict
 
     else:
-        op_dict = {"x": 0, "y": 0, "val": 0, "key": "beginning"}
+        op_dict = {"x": 0, "y": 0, "val": 0, "key": "onset"}
     return op_dict
