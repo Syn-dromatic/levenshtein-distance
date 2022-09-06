@@ -1,12 +1,4 @@
-import numpy as np
-from operator import sub
 from dataclasses import dataclass
-
-
-@dataclass
-class LevenshteinData:
-    distance: int
-    seq_arr: np.ndarray
 
 
 @dataclass
@@ -32,9 +24,17 @@ class OpsCosts:
 
 
 @dataclass
+class LevenshteinData:
+    distance: int
+    seq_arr: list
+
+
+@dataclass
 class SeqOp:
-    seq_arr: np.ndarray
+    seq_arr: list
     seq_dict: dict
+    seq_len1: int
+    seq_len2: int
 
 
 class Levenshtein:
@@ -69,7 +69,7 @@ class Levenshtein:
         ratio_calc = (total_lens - dist_val) / total_lens
         return ratio_calc
 
-    def sequence_array(self) -> np.ndarray:
+    def sequence_array(self) -> list:
         return self.lev_data.seq_arr
 
 
@@ -106,14 +106,13 @@ def get_op_value(op_values: dict) -> int:
 def create_sequence_data(seq1: str, seq2: str) -> SeqOp:
     seq_dict = {}
 
-    seq1_l, seq2_l = [*seq1], [*seq2]
-    seq1_l, seq2_l = insert_null_onset(seq1_l, seq2_l)
+    seq1_l, seq2_l = insert_null_onset([*seq1], [*seq2])
     sequences = [seq1_l, seq2_l]
 
     seq1_len = len(seq1_l)
     seq2_len = len(seq2_l)
 
-    zero_seq_arr = np.zeros((seq2_len, seq1_len))
+    seq_arr = [[0 for col in range(seq1_len)] for row in range(seq2_len)]
 
     for s_index, seq in enumerate(sequences):
         sequence_str = f"seq{s_index+1}"
@@ -122,7 +121,9 @@ def create_sequence_data(seq1: str, seq2: str) -> SeqOp:
                 seq_dict.update({sequence_str: {}})
             seq_dict[sequence_str].update({l_index: letter})
 
-    seq_op = SeqOp(seq_arr=zero_seq_arr, seq_dict=seq_dict)
+    seq_op = SeqOp(
+        seq_arr=seq_arr, seq_dict=seq_dict, seq_len1=seq1_len, seq_len2=seq2_len
+    )
     return seq_op
 
 
@@ -132,51 +133,13 @@ def insert_null_onset(seq1: list, seq2: list) -> tuple[list, list]:
     return seq1, seq2
 
 
-def insert_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
-    seq1_len = len(seq_dict["seq1"])
-    seq2_len = len(seq_dict["seq2"])
-
-    insert_state = (None, sub) if seq1_len < seq2_len else (sub, None)
-
-    x_op, y_op = insert_state
-
-    x = x_op(x, 1) if x_op else x
-    y = y_op(y, 1) if y_op else y
-    return x, y
-
-
-def replace_operation(x: int, y: int) -> tuple[int, int]:
-    replace_state = (sub, sub)
-    x_op, y_op = replace_state
-
-    x = x_op(x, 1) if x_op else x
-    y = y_op(y, 1) if y_op else y
-    return x, y
-
-
-def delete_operation(x: int, y: int, seq_dict: dict) -> tuple[int, int]:
-    seq1_len = len(seq_dict["seq1"])
-    seq2_len = len(seq_dict["seq2"])
-    delete_state = (sub, None) if seq1_len < seq2_len else (None, sub)
-    x_op, y_op = delete_state
-
-    x = x_op(x, 1) if x_op else x
-    y = y_op(y, 1) if y_op else y
-    return x, y
-
-
-def filter_ops_dict(ops_list: list) -> list:
-    filtered_ops = [op for op in ops_list if op["val"] is not None]
-    return filtered_ops
-
-
 def dynamic_operations(x: int, y: int, seq_op: SeqOp) -> dict:
     x_dict = seq_op.seq_dict["seq1"][x]
     y_dict = seq_op.seq_dict["seq2"][y]
 
-    x_ins, y_ins = insert_operation(x, y, seq_op.seq_dict)
-    x_rep, y_rep = replace_operation(x, y)
-    x_del, y_del = delete_operation(x, y, seq_op.seq_dict)
+    x_ins, y_ins = (x, y - 1) if seq_op.seq_len1 < seq_op.seq_len2 else (x - 1, y)
+    x_rep, y_rep = (x - 1, y - 1)
+    x_del, y_del = (x - 1, y) if seq_op.seq_len1 < seq_op.seq_len2 else (x, y - 1)
 
     ins_val = seq_op.seq_arr[y_ins][x_ins] if (x_ins >= 0 and y_ins >= 0) else None
     rep_val = seq_op.seq_arr[y_rep][x_rep] if (x_rep >= 0 and y_rep >= 0) else None
@@ -188,28 +151,22 @@ def dynamic_operations(x: int, y: int, seq_op: SeqOp) -> dict:
         {"x": x_del, "y": y_del, "val": del_val, "key": "delete"},
     ]
 
-    ops_list = filter_ops_dict(ops_list)
+    ops_list = [op for op in ops_list if op["val"] is not None]
 
     if ops_list:
         value_key = "val"
-        min_value = min((int(d[value_key])) for d in ops_list)
-        min_ops = [k for k in ops_list if (int(k[value_key])) == min_value]
-
-        min_op_dict = min_ops[0]
+        min_op_dict = min(ops_list, key=lambda x: x[value_key])
 
         if x_dict == y_dict:
             x_m = min_op_dict["x"]
             y_m = min_op_dict["y"]
-            op_dict = {
-                "x": x_m,
-                "y": y_m,
-                "val": seq_op.seq_arr[y_m][x_m],
-                "key": "match",
-            }
+            val_m = seq_op.seq_arr[y_m][x_m]
+            op_dict = {"x": x_m, "y": y_m, "val": val_m, "key": "match"}
 
         else:
             op_dict = min_op_dict
 
     else:
         op_dict = {"x": 0, "y": 0, "val": 0, "key": "onset"}
+
     return op_dict
