@@ -112,7 +112,7 @@ def create_sequence_data(seq1: str, seq2: str) -> SeqOp:
     seq1_len = len(seq1_l)
     seq2_len = len(seq2_l)
 
-    seq_arr = [[0 for col in range(seq1_len)] for row in range(seq2_len)]
+    seq_arr = [[0 for _ in range(seq1_len)] for _ in range(seq2_len)]
 
     for s_index, seq in enumerate(sequences):
         sequence_str = f"seq{s_index+1}"
@@ -133,6 +133,19 @@ def insert_null_onset(seq1: list, seq2: list) -> tuple[list, list]:
     return seq1, seq2
 
 
+def min_ops(ops_list):
+    min_ops = ops_list[0]
+    for op in ops_list:
+        op_x, op_y = op["x"], op["y"]
+        op_val = op["val"]
+        min_val = min_ops["val"]
+
+        if (op_x >= 0 and op_y >= 0) and (op_val < min_val):
+            min_ops = op
+
+    return min_ops
+
+
 def dynamic_operations(x: int, y: int, seq_op: SeqOp) -> dict:
     x_dict = seq_op.seq_dict["seq1"][x]
     y_dict = seq_op.seq_dict["seq2"][y]
@@ -141,28 +154,27 @@ def dynamic_operations(x: int, y: int, seq_op: SeqOp) -> dict:
     x_rep, y_rep = (x - 1, y - 1)
     x_del, y_del = (x - 1, y) if seq_op.seq_len1 < seq_op.seq_len2 else (x, y - 1)
 
-    ins_val = seq_op.seq_arr[y_ins][x_ins] if (x_ins >= 0 and y_ins >= 0) else None
-    rep_val = seq_op.seq_arr[y_rep][x_rep] if (x_rep >= 0 and y_rep >= 0) else None
-    del_val = seq_op.seq_arr[y_del][x_del] if (x_del >= 0 and y_del >= 0) else None
+    ins_val = seq_op.seq_arr[y_ins][x_ins]
+    rep_val = seq_op.seq_arr[y_rep][x_rep]
+    del_val = seq_op.seq_arr[y_del][x_del]
 
-    ops_list = [
-        {"x": x_ins, "y": y_ins, "val": ins_val, "key": "insert"},
-        {"x": x_rep, "y": y_rep, "val": rep_val, "key": "replace"},
-        {"x": x_del, "y": y_del, "val": del_val, "key": "delete"},
-    ]
+    onset_state = ins_val + rep_val + del_val == -3
+    match_state = x_dict == y_dict
 
-    ops_list = [op for op in ops_list if op["val"] is not None]
+    if onset_state:
+        op_dict = {"x": 0, "y": 0, "val": 0, "key": "onset"}
 
-    if ops_list:
-        value_key = "val"
-        min_op_dict = min(ops_list, key=lambda x: x[value_key])
-
-        if x_dict == y_dict:
-            op_dict = {"x": x_rep, "y": y_rep, "val": rep_val, "key": "match"}
-        else:
-            op_dict = min_op_dict
+    elif match_state:
+        op_dict = {"x": x_rep, "y": y_rep, "val": rep_val, "key": "match"}
 
     else:
-        op_dict = {"x": 0, "y": 0, "val": 0, "key": "onset"}
+        ops_list = [
+            {"x": x_ins, "y": y_ins, "val": ins_val, "key": "insert"},
+            {"x": x_rep, "y": y_rep, "val": rep_val, "key": "replace"},
+            {"x": x_del, "y": y_del, "val": del_val, "key": "delete"},
+        ]
+
+        min_op_dict = min_ops(ops_list)
+        op_dict = min_op_dict
 
     return op_dict
