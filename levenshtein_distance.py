@@ -158,11 +158,7 @@ def dynamic_operations(x: int, y: int, seq_op: SeqOp) -> dict:
         min_op_dict = min(ops_list, key=lambda x: x[value_key])
 
         if x_dict == y_dict:
-            x_m = min_op_dict["x"]
-            y_m = min_op_dict["y"]
-            val_m = seq_op.seq_arr[y_m][x_m]
-            op_dict = {"x": x_m, "y": y_m, "val": val_m, "key": "match"}
-
+            op_dict = {"x": x_rep, "y": y_rep, "val": rep_val, "key": "match"}
         else:
             op_dict = min_op_dict
 
