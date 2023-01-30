@@ -3,18 +3,21 @@ Compute operational differences between two sequences using the Levenshtein algo
 
 
 ## Usage:
+#### Regular Usage:
 ```
 from levenshtein_distance import Levenshtein
 
-lev = Levenshtein('test', 'text')
-distance = lev.distance()
-ratio = lev.ratio()
-array = lev.sequence_array()
+lev_object = Levenshtein('test', 'text')
+distance = lev_object.distance()
+ratio = lev_object.ratio()
+array = lev_object.sequence_array()
+```
 
 
-# with replace operation cost of 2
-lev = Levenshtein('test', 'text', rep_cost=2)
-distance = lev.distance()
-ratio = lev.ratio()
-array = lev.sequence_array()
+#### With replace operation cost of 2
+```
+lev_object = Levenshtein('test', 'text').set_replace_cost(2)
+distance = lev_object.distance()
+ratio = lev_object.ratio()
+array = lev_object.sequence_array()
 ```
