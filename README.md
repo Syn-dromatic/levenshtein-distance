@@ -20,7 +20,7 @@ array = lev_object.sequence_array()
 ```
 
 
-#### With replace operation cost of 2
+#### With replace operation cost of 2:
 ```python
 lev_object = Levenshtein('test', 'text').set_replace_cost(2)
 distance = lev_object.distance()
