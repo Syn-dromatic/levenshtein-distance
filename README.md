@@ -1,14 +1,14 @@
-# levenshtein-distance
+# Levenshtein Distance
 Compute operational differences between two sequences/texts using the Levenshtein algorithm
 
 
-## Installation:
+## 🛠️ Installation:
 ```
 pip install levenshtein-distance
 ```
 
 ___
-## Usage:
+## 🖥️ Usage:
 #### Regular Usage:
 ```python
 from levenshtein_distance import Levenshtein
